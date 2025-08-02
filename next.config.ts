@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [],
+    // Allow serving images from the public directory
+    unoptimized: true
+  }
 };
 
 export default nextConfig;
