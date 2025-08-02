@@ -2,524 +2,420 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import {
+  Container,
+  Box,
+  Paper,
+  Tabs,
+  Tab,
+  Typography,
+  Button,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Card,
+  CardContent,
+  Slider,
+  Stack,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  Avatar,
+  Chip,
+  Tooltip,
+  AppBar,
+  Toolbar,
+  SelectChangeEvent,
+} from '@mui/material';
+import {
+  VolumeUp as VolumeUpIcon,
+  VolumeOff as VolumeOffIcon,
+  Refresh as RefreshIcon,
+  Speaker as SpeakerIcon,
+  Apps as AppsIcon,
+  Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
+} from '@mui/icons-material';
 import { audioAPI } from '@/lib/api-client';
 import { AudioDevice, AudioApplication } from '@/types/audio';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'devices' | 'applications'>('devices');
+  const { mode, toggleColorMode } = useTheme();
+  const [activeTab, setActiveTab] = useState(0);
   
   // Device state
-  const [volume, setVolume] = useState(50);
-  const [device, setDevice] = useState('DefaultRenderDevice');
   const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [isMuted, setIsMuted] = useState(false);
+  const [device, setDevice] = useState<string>('DefaultRenderDevice');
+  const [volume, setVolume] = useState<number>(50);
+  const [muted, setMuted] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadingDevices, setLoadingDevices] = useState<boolean>(false);
   
   // Application state
   const [applications, setApplications] = useState<AudioApplication[]>([]);
+  const [loadingApps, setLoadingApps] = useState<boolean>(false);
   
   // UI state
-  const [loading, setLoading] = useState(false);
-  const [loadingDevices, setLoadingDevices] = useState(true);
-  const [loadingApps, setLoadingApps] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
 
   // Load devices on mount
   useEffect(() => {
     loadDevices();
+    loadApplications();
   }, []);
-
-  // Load applications when tab changes to applications
-  useEffect(() => {
-    if (activeTab === 'applications') {
-      loadApplications();
-    }
-  }, [activeTab]);
 
   // Load current volume when device changes
   useEffect(() => {
-    if (device && activeTab === 'devices') {
+    if (device) {
       loadCurrentVolume();
     }
   }, [device]);
 
   const loadDevices = async () => {
     setLoadingDevices(true);
-    const response = await audioAPI.getDevices();
-    
-    if (response.success) {
-      setDevices(response.devices);
-      // Update volume from device info
-      const selectedDevice = response.devices.find(d => d.name === device);
-      if (selectedDevice) {
-        setVolume(selectedDevice.volume);
-      } else if (!response.devices.find(d => d.name === device)) {
-        setDevice(response.defaultDevice);
+    try {
+      const response = await audioAPI.getDevices();
+      if (response.success) {
+        setDevices(response.devices);
+        if (response.defaultDevice && !device) {
+          setDevice(response.defaultDevice);
+        }
+      } else {
+        setError(response.error || 'Failed to load devices');
       }
-    } else {
-      setError(response.error || 'Failed to load devices');
-      setDevices([{ 
-        name: 'DefaultRenderDevice',
-        deviceName: 'Default Render Device',
-        id: 'DefaultRenderDevice',
-        volume: 100,
-        isDefault: true, 
-        type: 'render' 
-      }]);
+    } catch (err) {
+      setError('Failed to connect to API');
+    } finally {
+      setLoadingDevices(false);
     }
-    
-    setLoadingDevices(false);
   };
 
   const loadApplications = async () => {
     setLoadingApps(true);
-    setError(null);
-    const response = await audioAPI.getApplications();
-    
-    if (response.success) {
-      setApplications(response.applications);
-    } else {
-      setError(response.error || 'Failed to load applications');
+    try {
+      const response = await audioAPI.getApplications();
+      if (response.success) {
+        setApplications(response.applications);
+      } else {
+        setError(response.error || 'Failed to load applications');
+      }
+    } catch (err) {
+      setError('Failed to connect to API');
+    } finally {
+      setLoadingApps(false);
     }
-    
-    setLoadingApps(false);
   };
 
-  const loadCurrentVolume = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    const response = await audioAPI.getVolume(device);
-    
-    if (response.success) {
-      setVolume(response.volume);
-      setIsMuted(response.muted);
-    } else {
-      setError(response.error || 'Failed to get volume');
+  const loadCurrentVolume = async () => {
+    try {
+      const response = await audioAPI.getVolume({ device });
+      if (response.success) {
+        setVolume(response.volume);
+        setMuted(response.muted);
+      }
+    } catch (err) {
+      console.error('Failed to load current volume:', err);
     }
-    
-    setLoading(false);
-  }, [device]);
-
-  const handleVolumeChange = async (newVolume: number) => {
-    setVolume(newVolume);
   };
 
-  const handleVolumeSet = async () => {
+  const handleVolumeChange = useCallback(
+    async (_event: Event, newValue: number | number[]) => {
+      const newVolume = Array.isArray(newValue) ? newValue[0] : newValue;
+      setVolume(newVolume);
+      
+      setLoading(true);
+      try {
+        const response = await audioAPI.setVolume({ device, volume: newVolume });
+        if (response.success) {
+          setSuccess('Volume updated');
+        } else {
+          setError(response.error || 'Failed to set volume');
+          setVolume(volume); // Revert on error
+        }
+      } catch (err) {
+        setError('Failed to connect to API');
+        setVolume(volume); // Revert on error
+      } finally {
+        setLoading(false);
+      }
+    },
+    [device, volume]
+  );
+
+  const handleApplicationVolumeChange = useCallback(
+    async (app: AudioApplication, newVolume: number) => {
+      setLoading(true);
+      try {
+        const response = await audioAPI.setApplicationVolume({
+          processPath: app.processPath,
+          volume: newVolume,
+          instanceId: app.instanceId
+        });
+        
+        if (response.success) {
+          setApplications(prev => 
+            prev.map(a => 
+              a.processPath === app.processPath && a.instanceId === app.instanceId
+                ? { ...a, volume: newVolume }
+                : a
+            )
+          );
+          setSuccess('Application volume updated');
+        } else {
+          setError(response.error || 'Failed to set application volume');
+        }
+      } catch (err) {
+        setError('Failed to connect to API');
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const toggleMute = async () => {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    const response = await audioAPI.setVolume(device, volume);
-    
-    if (response.success) {
-      setSuccess('Volume updated successfully');
-      setTimeout(() => setSuccess(null), 3000);
-    } else {
-      setError(response.error || 'Failed to set volume');
+    try {
+      const response = await audioAPI.setMute({ device, mute: !muted });
+      if (response.success) {
+        setMuted(response.muted);
+        setSuccess(response.muted ? 'Muted' : 'Unmuted');
+      } else {
+        setError(response.error || 'Failed to toggle mute');
+      }
+    } catch (err) {
+      setError('Failed to connect to API');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
-  const handleMuteToggle = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    const newMuteState = !isMuted;
-    const response = await audioAPI.setMute(device, newMuteState);
-    
-    if (response.success) {
-      setIsMuted(newMuteState);
-      setSuccess(`Device ${newMuteState ? 'muted' : 'unmuted'} successfully`);
-      setTimeout(() => setSuccess(null), 3000);
-    } else {
-      setError(response.error || 'Failed to change mute state');
-    }
-    
-    setLoading(false);
+  const handleDeviceChange = (event: SelectChangeEvent) => {
+    setDevice(event.target.value);
   };
 
-  const handleApplicationVolumeChange = async (app: AudioApplication, newVolume: number) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    const response = await audioAPI.setApplicationVolume(app.processPath, newVolume, app.instanceId);
-    
-    if (response.success) {
-      setSuccess(`${app.name} volume updated`);
-      setTimeout(() => setSuccess(null), 3000);
-      // Update local state
-      setApplications(apps => 
-        apps.map(a => 
-          a.processPath === app.processPath && a.instanceId === app.instanceId 
-            ? { ...a, volume: newVolume }
-            : a
-        )
-      );
-    } else {
-      setError(response.error || 'Failed to set application volume');
-    }
-    
-    setLoading(false);
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      minHeight: '100vh',
-      padding: '2rem',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      background: '#f8f9fa'
-    }}>
-      <h1 style={{ 
-        fontSize: '2.5rem', 
-        fontWeight: '700', 
-        marginBottom: '2rem',
-        color: '#1a1a1a'
-      }}>
-        HTTP Volume Control
-      </h1>
+    <>
+      <AppBar position="static" elevation={0}>
+        <Toolbar>
+          <VolumeUpIcon sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            HTTP Volume Control
+          </Typography>
+          <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}>
+            <IconButton onClick={toggleColorMode} color="inherit">
+              {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+            </IconButton>
+          </Tooltip>
+        </Toolbar>
+      </AppBar>
 
-      {/* Tab Navigation */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        <button
-          onClick={() => setActiveTab('devices')}
-          style={{
-            padding: '0.75rem 2rem',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'devices' ? '#3182ce' : '#e2e8f0',
-            color: activeTab === 'devices' ? 'white' : '#4a5568',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          Devices
-        </button>
-        <button
-          onClick={() => setActiveTab('applications')}
-          style={{
-            padding: '0.75rem 2rem',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'applications' ? '#3182ce' : '#e2e8f0',
-            color: activeTab === 'applications' ? 'white' : '#4a5568',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          Applications
-        </button>
-      </div>
-      
-      <div style={{ 
-        background: 'white', 
-        padding: '2.5rem', 
-        borderRadius: '16px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-        width: '100%',
-        maxWidth: '600px'
-      }}>
-        {activeTab === 'devices' ? (
-          <>
-            {/* Device Dropdown */}
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.75rem', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#4a5568'
-              }}>
-                Audio Device
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <select
-                  value={device}
-                  onChange={(e) => setDevice(e.target.value)}
-                  disabled={loadingDevices || loading}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem 1rem',
-                    borderRadius: '8px',
-                    border: '2px solid #e2e8f0',
-                    fontSize: '1rem',
-                    transition: 'border-color 0.2s',
-                    outline: 'none',
-                    cursor: loadingDevices ? 'not-allowed' : 'pointer',
-                    backgroundColor: 'white',
-                    color: '#1a202c'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#3182ce'}
-                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-                >
-                  {devices.map((dev) => (
-                    <option 
-                      key={dev.id} 
-                      value={dev.name}
-                      style={{
-                        backgroundColor: 'white',
-                        color: '#1a202c',
-                        padding: '0.5rem'
-                      }}
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+          >
+            <Tab icon={<SpeakerIcon />} label="Devices" iconPosition="start" />
+            <Tab icon={<AppsIcon />} label="Applications" iconPosition="start" />
+          </Tabs>
+
+          {activeTab === 0 ? (
+            <Box>
+              {/* Device Selection */}
+              <Box sx={{ mb: 4 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-end">
+                  <FormControl fullWidth>
+                    <InputLabel>Audio Device</InputLabel>
+                    <Select
+                      value={device}
+                      onChange={handleDeviceChange}
+                      disabled={loadingDevices || loading}
+                      label="Audio Device"
                     >
-                      {dev.name} {dev.isDefault ? '(Default)' : ''} - {dev.volume}%
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={loadDevices}
-                  disabled={loading || loadingDevices}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: '#3182ce',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    cursor: loading || loadingDevices ? 'not-allowed' : 'pointer',
-                    opacity: loading || loadingDevices ? 0.6 : 1,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {loadingDevices ? 'Loading...' : 'Refresh'}
-                </button>
-              </div>
-            </div>
-
-            {/* Volume Control */}
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.75rem', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#4a5568'
-              }}>
-                Volume: {volume}%
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(e) => handleVolumeChange(Number(e.target.value))}
-                  disabled={loading || isMuted}
-                  style={{ 
-                    flex: 1,
-                    opacity: isMuted ? 0.5 : 1,
-                    cursor: isMuted ? 'not-allowed' : 'pointer'
-                  }}
-                />
-                <button
-                  onClick={handleVolumeSet}
-                  disabled={loading || isMuted}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: '#3182ce',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    cursor: loading || isMuted ? 'not-allowed' : 'pointer',
-                    opacity: loading || isMuted ? 0.6 : 1,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Set
-                </button>
-              </div>
-            </div>
-
-            {/* Mute Toggle */}
-            <div style={{ marginBottom: '2rem' }}>
-              <button
-                onClick={handleMuteToggle}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: isMuted ? '#e53e3e' : '#48bb78',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.6 : 1,
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>
-                  {isMuted ? '🔇' : '🔊'}
-                </span>
-                {isMuted ? 'Unmute' : 'Mute'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Applications List */}
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#2d3748' }}>
-                Running Applications
-              </h2>
-              <button
-                onClick={loadApplications}
-                disabled={loadingApps}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: '#3182ce',
-                  color: 'white',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: loadingApps ? 'not-allowed' : 'pointer',
-                  opacity: loadingApps ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                {loadingApps ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
-            
-            {loadingApps ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#718096' }}>
-                Loading applications...
-              </div>
-            ) : applications.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#718096' }}>
-                No applications with audio found
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {applications.map((app, index) => (
-                  <div 
-                    key={`${app.processPath}-${app.instanceId || index}`}
-                    style={{ 
-                      background: '#f7fafc', 
-                      padding: '1rem', 
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0'
-                    }}
+                      {devices.map((dev) => (
+                        <MenuItem key={dev.id} value={dev.name}>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography>
+                              {dev.name} {dev.isDefault && <Chip label="Default" size="small" color="primary" />}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {dev.volume}%
+                            </Typography>
+                          </Stack>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    onClick={loadDevices}
+                    disabled={loading || loadingDevices}
+                    startIcon={loadingDevices ? <CircularProgress size={20} /> : <RefreshIcon />}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                      {/* Application Icon */}
-                      <div style={{ 
-                        width: '48px', 
-                        height: '48px', 
-                        flexShrink: 0,
-                        position: 'relative',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        background: '#e2e8f0'
-                      }}>
-                        {app.iconPath ? (
-                          <Image
-                            src={app.iconPath}
-                            alt={`${app.name} icon`}
-                            width={48}
-                            height={48}
-                            style={{ objectFit: 'contain' }}
-                          />
-                        ) : (
-                          <div style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '20px',
-                            fontWeight: '600',
-                            color: '#718096'
-                          }}>
-                            {app.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
+                    Refresh
+                  </Button>
+                </Stack>
+              </Box>
+
+              {/* Volume Control */}
+              <Card>
+                <CardContent>
+                  <Stack spacing={3}>
+                    <Typography variant="h6">Volume Control</Typography>
+                    
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <IconButton
+                        onClick={toggleMute}
+                        disabled={loading}
+                        color={muted ? "error" : "default"}
+                      >
+                        {muted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+                      </IconButton>
                       
-                      {/* Application Details */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: '#2d3748' }}>
-                          {app.name} {app.instanceId ? `(${app.instanceId})` : ''}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#718096', marginBottom: '0.75rem' }}>
-                          {app.processPath}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{ fontSize: '0.875rem', color: '#4a5568', minWidth: '50px' }}>
-                            {Math.round(app.volume)}%
-                          </span>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={app.volume}
-                            onChange={(e) => handleApplicationVolumeChange(app, Number(e.target.value))}
-                            disabled={loading}
-                            style={{ 
-                              flex: 1,
-                              cursor: loading ? 'not-allowed' : 'pointer'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                      <Slider
+                        value={volume}
+                        onChange={handleVolumeChange}
+                        disabled={loading || muted}
+                        marks
+                        step={5}
+                        min={0}
+                        max={100}
+                        valueLabelDisplay="auto"
+                      />
+                      
+                      <Typography sx={{ minWidth: 50 }}>
+                        {volume}%
+                      </Typography>
+                    </Stack>
+
+                    {muted && (
+                      <Alert severity="info" icon={<VolumeOffIcon />}>
+                        Device is muted
+                      </Alert>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Box>
+          ) : (
+            <Box>
+              {/* Applications Header */}
+              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">Running Applications</Typography>
+                <Button
+                  variant="outlined"
+                  onClick={loadApplications}
+                  disabled={loadingApps}
+                  startIcon={loadingApps ? <CircularProgress size={20} /> : <RefreshIcon />}
+                >
+                  Refresh
+                </Button>
+              </Box>
+
+              {/* Applications List */}
+              {loadingApps ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <CircularProgress />
+                  <Typography sx={{ mt: 2 }} color="text.secondary">
+                    Loading applications...
+                  </Typography>
+                </Box>
+              ) : applications.length === 0 ? (
+                <Alert severity="info">
+                  No applications with audio found
+                </Alert>
+              ) : (
+                <Stack spacing={2}>
+                  {applications.map((app, index) => (
+                    <Card key={`${app.processPath}-${app.instanceId || index}`}>
+                      <CardContent>
+                        <Stack direction="row" spacing={2}>
+                          {/* Application Icon */}
+                          <Avatar
+                            sx={{ width: 48, height: 48, bgcolor: 'background.default' }}
+                            variant="rounded"
+                          >
+                            {app.iconPath ? (
+                              <Image
+                                src={app.iconPath}
+                                alt={`${app.name} icon`}
+                                width={48}
+                                height={48}
+                                style={{ objectFit: 'contain' }}
+                              />
+                            ) : (
+                              <Typography variant="h6" color="text.secondary">
+                                {app.name.charAt(0).toUpperCase()}
+                              </Typography>
+                            )}
+                          </Avatar>
+
+                          {/* Application Details */}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" fontWeight="medium">
+                              {app.name} {app.instanceId && <Chip label={app.instanceId} size="small" />}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {app.processPath}
+                            </Typography>
+                            
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
+                              <Typography sx={{ minWidth: 50 }}>
+                                {Math.round(app.volume)}%
+                              </Typography>
+                              <Slider
+                                value={app.volume}
+                                onChange={(_e, value) => handleApplicationVolumeChange(app, value as number)}
+                                disabled={loading}
+                                step={5}
+                                min={0}
+                                max={100}
+                                valueLabelDisplay="auto"
+                                sx={{ flex: 1 }}
+                              />
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          )}
+        </Paper>
 
         {/* Status Messages */}
-        {error && (
-          <div style={{
-            padding: '1rem',
-            background: '#fee',
-            borderRadius: '8px',
-            color: '#c53030',
-            fontSize: '0.875rem',
-            marginTop: '1rem'
-          }}>
-            ❌ {error}
-          </div>
-        )}
-        
-        {success && (
-          <div style={{
-            padding: '1rem',
-            background: '#f0fff4',
-            borderRadius: '8px',
-            color: '#22543d',
-            fontSize: '0.875rem',
-            marginTop: '1rem'
-          }}>
-            ✅ {success}
-          </div>
-        )}
-      </div>
-    </div>
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={() => setError('')}
+        >
+          <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+          open={!!success}
+          autoHideDuration={3000}
+          onClose={() => setSuccess('')}
+        >
+          <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </>
   );
 }
