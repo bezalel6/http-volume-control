@@ -4,10 +4,12 @@
 
 SoundVolumeCommandLine (svcl.exe) is a Windows command-line utility for controlling audio devices and application volumes. It provides comprehensive control over Windows audio settings through a simple command-line interface.
 
+**Note**: In this project, svcl.exe is located in the `binaries/` folder. See `binaries/README.md` for download instructions.
+
 ## Core Command Structure
 
 ```
-svcl.exe /<Command> <Target> [Parameters] [Options]
+binaries/svcl.exe /<Command> <Target> [Parameters] [Options]
 ```
 
 ## Device/Target Selection
