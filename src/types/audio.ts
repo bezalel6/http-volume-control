@@ -61,6 +61,7 @@ export interface AudioApplication {
   processPath: string;
   volume: number;
   instanceId?: string;
+  iconPath?: string;
 }
 
 export interface ApplicationListResponse {
