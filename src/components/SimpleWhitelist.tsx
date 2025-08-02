@@ -1,15 +1,13 @@
+'use client';
+
 import React from 'react';
 import {
   Box,
-  IconButton,
   Typography,
-  Grid,
-  Tooltip,
   CircularProgress,
   useMediaQuery,
   Theme,
 } from '@mui/material';
-import { Check as CheckIcon } from '@mui/icons-material';
 import Image from 'next/image';
 import { AudioProcess } from '@/types/audio';
 
@@ -29,7 +27,7 @@ const SimpleWhitelist: React.FC<SimpleWhitelistProps> = ({
   mode
 }) => {
   // Detect mobile landscape orientation
-  const isMobileLandscape = useMediaQuery((theme: Theme) => 
+  const isMobileLandscape = useMediaQuery((theme: Theme) =>
     `${theme.breakpoints.down('sm')} and (orientation: landscape)`
   );
   if (loading) {
@@ -57,76 +55,78 @@ const SimpleWhitelist: React.FC<SimpleWhitelistProps> = ({
   });
 
   return (
-    <Box sx={{ height: isMobileLandscape ? '100%' : 'auto' }}>
-      <Grid container spacing={1} sx={{ overflow: isMobileLandscape ? 'auto' : 'visible' }}>
-        {sortedProcesses.map((process) => {
-          const isSelected = selectedProcesses.includes(process.processPath);
-          
-          return (
-            <Grid item xs={3} sm={2.4} md={2} key={process.processPath}>
-                <Box
-                  onClick={() => onToggleProcess(process.processPath)}
+    <Box sx={{
+      height: isMobileLandscape ? '100%' : 'auto',
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 0,
+      overflow: isMobileLandscape ? 'auto' : 'visible'
+    }}>
+      {sortedProcesses.map((process) => {
+        const isSelected = selectedProcesses.includes(process.processPath);
+
+        return (
+          <Box
+            key={process.processPath}
+            onClick={() => onToggleProcess(process.processPath)}
+            sx={{
+              position: 'relative',
+              width: { xs: '72px', sm: '80px', md: '88px' },
+              height: { xs: '72px', sm: '80px', md: '88px' },
+              cursor: 'pointer',
+              transition: 'opacity 0.15s ease, transform 0.15s ease',
+              opacity: isSelected ? 1 : 0.4,
+              transform: isSelected ? 'scale(1)' : 'scale(0.9)',
+              '&:hover': {
+                opacity: isSelected ? 1 : 0.7,
+                transform: 'scale(1)',
+              },
+              '&:active': {
+                transform: 'scale(0.95)',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 1,
+              }}
+            >
+              {process.iconPath ? (
+                <Image
+                  src={process.iconPath}
+                  alt={process.name}
+                  width={64}
+                  height={64}
+                  style={{
+                    objectFit: 'contain',
+                    filter: isSelected ? 'none' : 'grayscale(100%)',
+                    transition: 'filter 0.15s ease',
+                  }}
+                />
+              ) : (
+                <Typography
+                  variant="h3"
                   sx={{
-                    position: 'relative',
-                    width: '100%',
-                    aspectRatio: '1',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'opacity 0.15s ease, background-color 0.15s ease',
-                    bgcolor: isSelected 
-                      ? (mode === 'dark' ? 'primary.dark' : 'primary.main')
-                      : (mode === 'dark' ? 'grey.900' : 'grey.100'),
-                    opacity: isSelected ? 1 : 0.6,
-                    '&:hover': {
-                      opacity: 1,
-                    },
-                    '&:active': {
-                      opacity: 0.8,
-                    },
+                    color: isSelected
+                      ? (mode === 'dark' ? 'primary.light' : 'primary.main')
+                      : 'text.disabled',
+                    fontWeight: 700,
+                    userSelect: 'none',
+                    transition: 'color 0.15s ease',
                   }}
                 >
-                  {/* App Icon */}
-                  <Box
-                    sx={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      p: 2,
-                    }}
-                  >
-                    {process.iconPath ? (
-                      <Image
-                        src={process.iconPath}
-                        alt={process.name}
-                        width={48}
-                        height={48}
-                        style={{ 
-                          objectFit: 'contain',
-                        }}
-                      />
-                    ) : (
-                      <Typography 
-                        variant="h4" 
-                        sx={{ 
-                          color: isSelected 
-                            ? (mode === 'dark' ? 'white' : 'white')
-                            : 'text.secondary',
-                          fontWeight: 600,
-                          userSelect: 'none',
-                        }}
-                      >
-                        {process.name.charAt(0).toUpperCase()}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-            </Grid>
-          );
-        })}
-      </Grid>
+                  {process.name.charAt(0).toUpperCase()}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
   );
 };
