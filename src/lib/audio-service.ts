@@ -3,7 +3,8 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
-import { AudioError, AudioDevice, AudioApplication } from '@/types/audio';
+import { AudioError, AudioDevice, AudioApplication, AudioProcess } from '@/types/audio';
+import { SettingsService } from '@/lib/settings-service';
 
 const execAsync = promisify(exec);
 
@@ -12,6 +13,7 @@ export class AudioService {
   private getNirPath: string;
   private extractIconPath: string;
   private iconsDir: string;
+  private settingsService: SettingsService;
 
   constructor() {
     // Path to svcl.exe, GetNir.exe, and extracticon.exe in project root
@@ -19,6 +21,7 @@ export class AudioService {
     this.getNirPath = path.join(process.cwd(), 'GetNir.exe');
     this.extractIconPath = path.join(process.cwd(), 'extracticon.exe');
     this.iconsDir = path.join(process.cwd(), 'public', 'icons', 'apps');
+    this.settingsService = new SettingsService();
   }
 
   private async execWithLogging(command: string): Promise<{ stdout: string; stderr: string }> {
@@ -151,7 +154,7 @@ export class AudioService {
         const parts = this.parseTSVLine(line);
         
         if (parts.length >= 4) {
-          const [deviceName, name, volumeStr, defaultStatus] = parts;
+          const [deviceName, , volumeStr, defaultStatus] = parts;
           const volume = parseFloat(volumeStr) || 0;
           const isDefault = defaultStatus.toLowerCase() === 'render';
           
@@ -216,8 +219,28 @@ export class AudioService {
       // First, get the name of the default audio device
       const { defaultDevice } = await this.getDevices();
       
-      // Use piped command to get application info - only show applications that are playing audio (Direction=Render) on the default device
-      const command = `"${this.svclPath}" /scomma "" /Columns "Name,Type,Process Path,Volume Percent,Direction,Device Name" | "${this.getNirPath}" "Name,Volume Percent,Process Path,Device Name" "Type=Application && 'Process Path' EndsWith .exe && Direction=Render && 'Device Name'='${defaultDevice}'"`;
+      // Load settings to get whitelist
+      const settings = await this.settingsService.loadSettings();
+      const whitelist = settings.whitelistedApps || [];
+      
+      // Build the filter expression
+      let filterExpression = `Type=Application && 'Process Path' EndsWith .exe && Direction=Render && 'Device Name'='${defaultDevice}'`;
+      
+      // If whitelist is not empty, add process path filtering
+      if (whitelist.length > 0) {
+        // Build OR expression for whitelisted processes
+        const processFilters = whitelist.map(processPath => {
+          // Escape single quotes in the path and wrap in single quotes
+          const escapedPath = processPath.replace(/'/g, "''");
+          return `'Process Path'='${escapedPath}'`;
+        }).join(' || ');
+        
+        // Add the whitelist filter wrapped in parentheses
+        filterExpression += ` && (${processFilters})`;
+      }
+      
+      // Use piped command to get application info with whitelist filtering
+      const command = `"${this.svclPath}" /scomma "" /Columns "Name,Type,Process Path,Volume Percent,Direction,Device Name" | "${this.getNirPath}" "Name,Volume Percent,Process Path,Device Name" "${filterExpression}"`;
       
       const { stdout } = await this.execWithLogging(command);
       
@@ -231,7 +254,7 @@ export class AudioService {
         const parts = this.parseTSVLine(line);
         
         if (parts.length >= 4) {
-          const [name, volumeStr, processPath, deviceName] = parts;
+          const [name, volumeStr, processPath] = parts;
           const volume = parseFloat(volumeStr) || 0;
           
           // Handle multiple instances
@@ -258,7 +281,7 @@ export class AudioService {
     }
   }
 
-  async setApplicationVolume(processPath: string, volume: number, _instanceId?: string): Promise<void> {
+  async setApplicationVolume(processPath: string, volume: number): Promise<void> {
     const validVolume = this.validateVolume(volume);
     
     // For applications, we use the process name (filename) as the identifier
@@ -318,6 +341,54 @@ export class AudioService {
     } catch (error) {
       console.error('Error extracting application icon:', error);
       return undefined;
+    }
+  }
+
+  async getAllProcesses(): Promise<AudioProcess[]> {
+    try {
+      // Get all applications that have audio sessions
+      const filterExpression = "Type=Application && 'Process Path' EndsWith .exe";
+      const command = `"${this.svclPath}" /scomma "" /Columns "Name,Type,Process Path,Direction" | "${this.getNirPath}" "Name,Process Path,Direction" "${filterExpression}"`;
+      
+      const { stdout } = await this.execWithLogging(command);
+      
+      // Parse CSV content
+      const lines = stdout.split('\n').filter(line => line.trim());
+      const processMap = new Map<string, AudioProcess>();
+      
+      for (const line of lines) {
+        // Parse TSV line - GetNir outputs tab-separated values
+        const parts = this.parseTSVLine(line);
+        
+        if (parts.length >= 3) {
+          const [name, processPath, direction] = parts;
+          
+          if (!processMap.has(processPath)) {
+            // Extract icon for this application
+            const iconPath = await this.extractApplicationIcon(processPath.trim());
+            
+            processMap.set(processPath, {
+              name: name.trim(),
+              processPath: processPath.trim(),
+              iconPath,
+              isActive: direction === 'Render'
+            });
+          } else if (direction === 'Render') {
+            // Update isActive if this process is rendering audio
+            const existing = processMap.get(processPath)!;
+            existing.isActive = true;
+          }
+        }
+      }
+      
+      // Convert to array and sort by name
+      const processes = Array.from(processMap.values());
+      processes.sort((a, b) => a.name.localeCompare(b.name));
+      
+      return processes;
+    } catch (error) {
+      console.error('Failed to get all processes:', error);
+      return [];
     }
   }
 }

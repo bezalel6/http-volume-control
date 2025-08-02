@@ -4,6 +4,7 @@ import { AudioService } from '@/lib/audio-service';
 import { 
   AudioDevice, 
   AudioApplication,
+  AudioProcess,
   AudioError
 } from '@/types/audio';
 
@@ -86,8 +87,7 @@ export async function getApplications(): Promise<ActionResult<AudioApplication[]
 
 export async function setApplicationVolume(
   processPath: string, 
-  volume: number, 
-  instanceId?: string
+  volume: number
 ): Promise<ActionResult<void>> {
   try {
     // Validate volume range
@@ -95,7 +95,7 @@ export async function setApplicationVolume(
       return { success: false, error: 'Volume must be between 0 and 100' };
     }
     
-    await audioService.setApplicationVolume(processPath, volume, instanceId);
+    await audioService.setApplicationVolume(processPath, volume);
     return { success: true, data: undefined };
   } catch (error) {
     console.error('Failed to set application volume:', error);
@@ -103,6 +103,19 @@ export async function setApplicationVolume(
     return { 
       success: false, 
       error: audioError.message || 'Failed to set application volume' 
+    };
+  }
+}
+
+export async function getAllProcesses(): Promise<ActionResult<AudioProcess[]>> {
+  try {
+    const processes = await audioService.getAllProcesses();
+    return { success: true, data: processes };
+  } catch (error) {
+    console.error('Failed to get all processes:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get processes' 
     };
   }
 }
