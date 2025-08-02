@@ -1,3 +1,4 @@
+'use client';
 import {
     Dialog,
     DialogContent,
@@ -6,18 +7,16 @@ import {
     IconButton,
     Box,
     Button,
-    Stack,
     CircularProgress,
     Alert,
     Typography,
-    Divider,
     useMediaQuery,
     Theme,
     Snackbar,
     Fade
 } from "@mui/material";
-import { 
-    Settings as SettingsIcon, 
+import {
+    Settings as SettingsIcon,
     Save as SaveIcon
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";

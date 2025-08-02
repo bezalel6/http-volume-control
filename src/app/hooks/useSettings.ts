@@ -12,7 +12,7 @@ interface UseSettingsState {
 }
 
 interface UseSettingsActions {
-  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<void>;
+  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<boolean>;
   reloadSettings: () => Promise<void>;
 }
 
@@ -51,7 +51,7 @@ export function useSettings(): UseSettingsReturn {
   const updateSetting = useCallback(async <K extends keyof Settings>(
     key: K, 
     value: Settings[K]
-  ) => {
+  ): Promise<boolean> => {
     setState(prev => ({ ...prev, saving: true, error: null }));
     
     const updates = { [key]: value } as Partial<Settings>;
@@ -63,12 +63,14 @@ export function useSettings(): UseSettingsReturn {
         settings: result.data,
         saving: false,
       }));
+      return true;
     } else {
       setState(prev => ({
         ...prev,
         saving: false,
         error: result.error,
       }));
+      return false;
     }
   }, []);
 
