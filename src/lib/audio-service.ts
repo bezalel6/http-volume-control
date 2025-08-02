@@ -17,14 +17,31 @@ export class AudioService {
   private debug: boolean;
 
   constructor() {
-    // Path to svcl.exe, GetNir.exe, and extracticon.exe in project root
-    this.svclPath = path.join(process.cwd(), 'svcl.exe');
-    this.getNirPath = path.join(process.cwd(), 'GetNir.exe');
-    this.extractIconPath = path.join(process.cwd(), 'extracticon.exe');
+    // Path to svcl.exe, GetNir.exe, and extracticon.exe in binaries folder
+    this.svclPath = path.join(process.cwd(), 'binaries', 'svcl.exe');
+    this.getNirPath = path.join(process.cwd(), 'binaries', 'GetNir.exe');
+    this.extractIconPath = path.join(process.cwd(), 'binaries', 'extracticon.exe');
     this.iconsDir = path.join(process.cwd(), 'public', 'icons', 'apps');
     this.settingsService = new SettingsService();
     // Debug logging is disabled by default
     this.debug = process.env.AUDIO_DEBUG === 'true';
+    
+    // Check if binaries exist on initialization
+    this.checkBinaries();
+  }
+  
+  private async checkBinaries(): Promise<void> {
+    try {
+      await fs.access(this.svclPath);
+      await fs.access(this.getNirPath);
+      await fs.access(this.extractIconPath);
+    } catch (error) {
+      console.error('\n⚠️  Required binaries not found!');
+      console.error('\nPlease download the binaries:');
+      console.error('1. Download http-volume-control-binaries.zip from the releases page');
+      console.error('2. Extract all files to the binaries/ folder');
+      console.error('\nOr see binaries/README.md for manual download instructions.\n');
+    }
   }
 
   private async execWithLogging(command: string): Promise<{ stdout: string; stderr: string }> {
@@ -66,6 +83,10 @@ export class AudioService {
     } catch (error) {
       if (this.debug) {
         console.error('AudioService command error:', error);
+      }
+      // Check if error is due to missing executable
+      if (error instanceof Error && error.message.includes('is not recognized')) {
+        throw this.createError(new Error('Required binaries not found. See binaries/README.md for installation instructions.'));
       }
       throw this.createError(error);
     }
