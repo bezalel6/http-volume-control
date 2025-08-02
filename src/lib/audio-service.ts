@@ -1,6 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import fs from 'fs/promises';
+import crypto from 'crypto';
 import { AudioError, AudioDevice, AudioApplication } from '@/types/audio';
 
 const execAsync = promisify(exec);
@@ -8,11 +10,15 @@ const execAsync = promisify(exec);
 export class AudioService {
   private svclPath: string;
   private getNirPath: string;
+  private extractIconPath: string;
+  private iconsDir: string;
 
   constructor() {
-    // Path to svcl.exe and GetNir.exe in project root
+    // Path to svcl.exe, GetNir.exe, and extracticon.exe in project root
     this.svclPath = path.join(process.cwd(), 'svcl.exe');
     this.getNirPath = path.join(process.cwd(), 'GetNir.exe');
+    this.extractIconPath = path.join(process.cwd(), 'extracticon.exe');
+    this.iconsDir = path.join(process.cwd(), 'public', 'icons', 'apps');
   }
 
   private async execWithLogging(command: string): Promise<{ stdout: string; stderr: string }> {
@@ -231,11 +237,15 @@ export class AudioService {
           const instanceCount = appMap.get(processPath) || 0;
           appMap.set(processPath, instanceCount + 1);
           
+          // Extract icon for this application
+          const iconPath = await this.extractApplicationIcon(processPath.trim());
+          
           applications.push({
             name: name.trim(),
             processPath: processPath.trim(),
             volume,
-            instanceId: instanceCount > 0 ? `instance-${instanceCount}` : undefined
+            instanceId: instanceCount > 0 ? `instance-${instanceCount}` : undefined,
+            iconPath
           });
         }
       }
@@ -269,6 +279,44 @@ export class AudioService {
         errorObj.code = 'APPLICATION_NOT_FOUND';
       }
       throw errorObj;
+    }
+  }
+
+  private async extractApplicationIcon(processPath: string): Promise<string | undefined> {
+    try {
+      // Generate a unique filename based on the process path
+      const processName = path.basename(processPath, path.extname(processPath));
+      const hash = crypto.createHash('md5').update(processPath).digest('hex').substring(0, 8);
+      const iconFileName = `${processName}-${hash}.png`;
+      const iconPath = path.join(this.iconsDir, iconFileName);
+      
+      // Check if icon already exists
+      try {
+        await fs.access(iconPath);
+        // Icon exists, return the public path
+        return `/icons/apps/${iconFileName}`;
+      } catch {
+        // Icon doesn't exist, extract it
+      }
+      
+      // Ensure icons directory exists
+      await fs.mkdir(this.iconsDir, { recursive: true });
+      
+      // Extract icon using extracticon.exe
+      const command = `"${this.extractIconPath}" "${processPath}" "${iconPath}"`;
+      await this.execWithLogging(command);
+      
+      // Verify the icon was created
+      try {
+        await fs.access(iconPath);
+        return `/icons/apps/${iconFileName}`;
+      } catch {
+        console.error(`Failed to extract icon for ${processPath}`);
+        return undefined;
+      }
+    } catch (error) {
+      console.error('Error extracting application icon:', error);
+      return undefined;
     }
   }
 }
