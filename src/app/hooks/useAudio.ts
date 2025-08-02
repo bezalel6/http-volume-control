@@ -66,8 +66,8 @@ export function useAudio(): UseAudioReturn {
   // State
   const [state, setState] = useState<UseAudioState>({
     devices: [],
-    defaultDevice: 'DefaultRenderDevice',
-    currentDevice: 'DefaultRenderDevice',
+    defaultDevice: '',
+    currentDevice: '',
     volume: 50,
     muted: false,
     applications: [],
@@ -91,6 +91,7 @@ export function useAudio(): UseAudioReturn {
         ...prev,
         devices: result.data.devices,
         defaultDevice: result.data.defaultDevice,
+        currentDevice: prev.currentDevice === 'DefaultRenderDevice' ? result.data.defaultDevice : prev.currentDevice,
         loadingDevices: false,
       }));
     } else {
