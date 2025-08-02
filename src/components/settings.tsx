@@ -2,6 +2,7 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
+    DialogActions,
     IconButton,
     Box,
     Button,
@@ -10,14 +11,18 @@ import {
     Alert,
     Typography,
     Divider,
-    Chip
+    Chip,
+    useMediaQuery,
+    Theme,
+    Snackbar
 } from "@mui/material";
 import { Settings as SettingsIcon, Save as SaveIcon, Apps as AppsIcon } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useSettings } from "@/app/hooks/useSettings";
-import ProcessScroller from "@/components/ProcessScroller";
+import SimpleWhitelist from "@/components/SimpleWhitelist";
 import { getAllProcesses } from "@/app/actions/audio";
 import { AudioProcess } from "@/types/audio";
+import { useTheme } from '@/components/ThemeProvider';
 
 interface SettingsProps {
     onSettingsChange?: () => void;
@@ -25,11 +30,17 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ onSettingsChange }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const { mode } = useTheme();
     const { settings, loading, saving, error, updateSetting } = useSettings();
     const [whitelistedApps, setWhitelistedApps] = useState<string[]>(settings.whitelistedApps || []);
     const [processes, setProcesses] = useState<AudioProcess[]>([]);
     const [loadingProcesses, setLoadingProcesses] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
+    // Detect mobile landscape orientation
+    const isMobileLandscape = useMediaQuery((theme: Theme) =>
+        `${theme.breakpoints.down('sm')} and (orientation: landscape)`
+    );
     // Update local state when settings load
     useEffect(() => {
         setWhitelistedApps(settings.whitelistedApps || []);
@@ -62,9 +73,13 @@ const Settings: React.FC<SettingsProps> = ({ onSettingsChange }) => {
     };
 
     const handleSave = async () => {
-        await updateSetting('whitelistedApps', whitelistedApps);
-        if (onSettingsChange) {
-            onSettingsChange();
+        const success = await updateSetting('whitelistedApps', whitelistedApps);
+        if (success) {
+            setSuccessMessage('Settings saved successfully');
+            setIsOpen(false);
+            if (onSettingsChange) {
+                onSettingsChange();
+            }
         }
     };
 
@@ -86,88 +101,173 @@ const Settings: React.FC<SettingsProps> = ({ onSettingsChange }) => {
                 open={isOpen}
                 onClose={handleClose}
                 maxWidth="sm"
-                fullWidth
+                fullWidth={false}
+                fullScreen={isMobileLandscape}
+                sx={{
+                    '& .MuiDialog-paper': {
+                        width: isMobileLandscape ? '100%' : '500px',
+                        maxHeight: isMobileLandscape ? '100%' : '600px',
+                    }
+                }}
             >
                 <DialogTitle>Settings</DialogTitle>
                 <Divider />
-                <DialogContent>
+                <DialogContent sx={{ p: isMobileLandscape ? 1 : 2, pb: isMobileLandscape ? 0 : 2 }}>
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress />
                         </Box>
                     ) : (
-                        <Stack spacing={3}>
+                        <>
                             {error && (
-                                <Alert severity="error">{error}</Alert>
+                                <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                             )}
 
                             <Box>
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                    <AppsIcon />
-                                    <Typography variant="h6">
-                                        Application Whitelist
-                                    </Typography>
-                                </Stack>
-
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Select which applications should appear in the volume control.
-                                    {whitelistedApps.length === 0 && " When no apps are selected, all applications will be shown."}
-                                </Typography>
-
-                                {whitelistedApps.length > 0 && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Selected Applications ({whitelistedApps.length})
+                                {/* Simple header for desktop */}
+                                {!isMobileLandscape && (
+                                    <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                        <Typography variant="h6" fontWeight="medium" gutterBottom>
+                                            Application Whitelist
                                         </Typography>
-                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                            {whitelistedApps.map(processPath => {
-                                                const process = processes.find(p => p.processPath === processPath);
-                                                return (
-                                                    <Chip
-                                                        key={processPath}
-                                                        label={process?.name || processPath.split('\\').pop()}
-                                                        size="small"
-                                                        onDelete={() => handleToggleProcess(processPath)}
-                                                    />
-                                                );
-                                            })}
-                                        </Stack>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Select which applications appear in the volume control
+                                        </Typography>
+                                        {whitelistedApps.length > 0 && (
+                                            <Chip
+                                                label={`${whitelistedApps.length} apps selected`}
+                                                color="primary"
+                                                sx={{ mt: 1 }}
+                                            />
+                                        )}
                                     </Box>
                                 )}
 
-                                <Box sx={{
-                                    bgcolor: 'background.default',
-                                    borderRadius: 2,
-                                    p: 2,
-                                    border: 1,
-                                    borderColor: 'divider'
-                                }}>
-                                    <ProcessScroller
+                                {/* Mobile landscape layout */}
+                                {isMobileLandscape ? (
+                                    <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 140px)' }}>
+                                        {/* Left Column - Header and Selected Count */}
+                                        <Box sx={{
+                                            flex: '0 0 200px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            pr: 2,
+                                            borderRight: 1,
+                                            borderColor: 'divider'
+                                        }}>
+                                            <Stack direction="column" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 48,
+                                                        height: 48,
+                                                        borderRadius: 2,
+                                                        bgcolor: mode === 'dark' ? 'primary.dark' : 'primary.light',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    <AppsIcon sx={{ color: mode === 'dark' ? 'primary.contrastText' : 'primary.main' }} />
+                                                </Box>
+                                                <Typography variant="h6" fontWeight="bold">
+                                                    Choose Your Apps
+                                                </Typography>
+                                            </Stack>
+
+                                            {whitelistedApps.length > 0 && (
+                                                <Box
+                                                    sx={{
+                                                        p: 2,
+                                                        borderRadius: 2,
+                                                        bgcolor: mode === 'dark' ? 'grey.900' : 'grey.100',
+                                                        textAlign: 'center',
+                                                        width: '100%'
+                                                    }}
+                                                >
+                                                    <Typography variant="h4" fontWeight="bold" color="primary">
+                                                        {whitelistedApps.length}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        apps selected
+                                                    </Typography>
+                                                </Box>
+                                            )}
+
+                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
+                                                Tap apps to show/hide them from volume control
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Right Column - App List */}
+                                        <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                                            <SimpleWhitelist
+                                                processes={processes}
+                                                selectedProcesses={whitelistedApps}
+                                                onToggleProcess={handleToggleProcess}
+                                                loading={loadingProcesses}
+                                                mode={mode}
+                                            />
+                                        </Box>
+                                    </Box>
+                                ) : (
+                                    /* Desktop layout - simple */
+                                    <SimpleWhitelist
                                         processes={processes}
                                         selectedProcesses={whitelistedApps}
                                         onToggleProcess={handleToggleProcess}
                                         loading={loadingProcesses}
+                                        mode={mode}
                                     />
-                                </Box>
+                                )}
                             </Box>
 
-                            <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                <Button onClick={handleClose}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSave}
-                                    disabled={saving || JSON.stringify(whitelistedApps) === JSON.stringify(settings.whitelistedApps || [])}
-                                    startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                                >
-                                    {saving ? 'Saving...' : 'Save Changes'}
-                                </Button>
-                            </Stack>
-                        </Stack>
+                            {!isMobileLandscape && (
+                                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                                    <Button onClick={handleClose}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleSave}
+                                        disabled={saving || JSON.stringify(whitelistedApps) === JSON.stringify(settings.whitelistedApps || [])}
+                                        startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                                    >
+                                        {saving ? 'Saving...' : 'Save'}
+                                    </Button>
+                                </Stack>
+                            )}
+                        </>
                     )}
                 </DialogContent>
-            </Dialog></>
+                {isMobileLandscape && !loading && (
+                    <DialogActions sx={{ px: 2, py: 1 }}>
+                        <Button onClick={handleClose} size="small">
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleSave}
+                            size="small"
+                            disabled={saving || JSON.stringify(whitelistedApps) === JSON.stringify(settings.whitelistedApps || [])}
+                            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                        >
+                            {saving ? 'Saving...' : 'Save'}
+                        </Button>
+                    </DialogActions>
+                )}
+            </Dialog>
+
+            {/* Success Toast */}
+            <Snackbar
+                open={!!successMessage}
+                autoHideDuration={3000}
+                onClose={() => setSuccessMessage('')}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
+                    {successMessage}
+                </Alert>
+            </Snackbar></>
     );
 };
 
