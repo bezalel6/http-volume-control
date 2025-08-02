@@ -49,7 +49,7 @@ function useDebounce<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
   
   return useCallback((...args: Parameters<T>) => {
     if (timeoutRef.current) {
@@ -67,7 +67,7 @@ export function useAudio(): UseAudioReturn {
   const [state, setState] = useState<UseAudioState>({
     devices: [],
     defaultDevice: '',
-    currentDevice: '',
+    currentDevice: 'DefaultRenderDevice',
     volume: 50,
     muted: false,
     applications: [],
@@ -91,7 +91,7 @@ export function useAudio(): UseAudioReturn {
         ...prev,
         devices: result.data.devices,
         defaultDevice: result.data.defaultDevice,
-        currentDevice: prev.currentDevice === 'DefaultRenderDevice' ? result.data.defaultDevice : prev.currentDevice,
+        currentDevice: 'DefaultRenderDevice',
         loadingDevices: false,
       }));
     } else {

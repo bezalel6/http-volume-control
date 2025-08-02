@@ -11,10 +11,6 @@ import {
   Typography,
   Button,
   IconButton,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Card,
   CardContent,
   Slider,
@@ -27,7 +23,6 @@ import {
   Tooltip,
   AppBar,
   Toolbar,
-  SelectChangeEvent,
 } from '@mui/material';
 import {
   VolumeUp as VolumeUpIcon,
@@ -50,10 +45,6 @@ export default function Home() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handleDeviceChange = (event: SelectChangeEvent) => {
-    audio.setDevice(event.target.value);
   };
 
   const handleVolumeChange = async (_event: Event, value: number | number[]) => {
@@ -98,7 +89,7 @@ export default function Home() {
               onChange={handleTabChange}
               sx={{ flexGrow: 1 }}
             >
-              <Tab icon={<SpeakerIcon />} label="Devices" iconPosition="start" />
+              <Tab icon={<SpeakerIcon />} label="Default Device" iconPosition="start" />
               <Tab icon={<AppsIcon />} label="Applications" iconPosition="start" />
             </Tabs>
             <Settings />
@@ -106,53 +97,37 @@ export default function Home() {
 
           {activeTab === 0 ? (
             <Box>
-              {/* Device Selection */}
-              <Box sx={{ mb: 4 }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <FormControl fullWidth>
-                    <InputLabel>Audio Device</InputLabel>
-                    <Select
-                      value={audio.currentDevice}
-                      onChange={handleDeviceChange}
-                      disabled={audio.loadingDevices || audio.loadingVolume}
-                      label="Audio Device"
-                    >
-                      {audio.devices.map((dev) => (
-                        <MenuItem key={dev.id} value={dev.name}>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography>
-                              {dev.name} {dev.isDefault && <Chip label="Default" size="small" color="primary" />}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {dev.volume}%
-                            </Typography>
-                          </Stack>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Button
-                    variant="outlined"
-                    onClick={audio.loadDevices}
-                    disabled={audio.loadingDevices}
-                    startIcon={audio.loadingDevices ? <CircularProgress size={20} /> : <RefreshIcon />}
-                  >
-                    Refresh
-                  </Button>
-                </Stack>
-              </Box>
-
-              {/* Volume Control */}
+              {/* Default Device Volume Control */}
               <Card>
                 <CardContent>
                   <Stack spacing={3}>
-                    <Typography variant="h6">Volume Control</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6">Default Audio Device</Typography>
+                      <Button
+                        size="small"
+                        onClick={audio.loadDevices}
+                        disabled={audio.loadingDevices}
+                        startIcon={audio.loadingDevices ? <CircularProgress size={16} /> : <RefreshIcon />}
+                      >
+                        Refresh
+                      </Button>
+                    </Box>
+
+                    {/* Current Device Info */}
+                    {audio.defaultDevice && (
+                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                        <Typography variant="body1" fontWeight="medium">
+                          {audio.defaultDevice}
+                        </Typography>
+                      </Box>
+                    )}
 
                     <Stack direction="row" spacing={2} alignItems="center">
                       <IconButton
                         onClick={handleMuteToggle}
                         disabled={audio.loadingVolume}
                         color={audio.muted ? "error" : "default"}
+                        size="large"
                       >
                         {audio.muted ? <VolumeOffIcon /> : <VolumeUpIcon />}
                       </IconButton>
@@ -168,7 +143,7 @@ export default function Home() {
                         valueLabelDisplay="auto"
                       />
 
-                      <Typography sx={{ minWidth: 50 }}>
+                      <Typography sx={{ minWidth: 50, fontSize: '1.1rem', fontWeight: 'medium' }}>
                         {audio.volume}%
                       </Typography>
                     </Stack>
@@ -198,14 +173,7 @@ export default function Home() {
               </Box>
 
               {/* Applications List */}
-              {audio.loadingApplications ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <CircularProgress />
-                  <Typography sx={{ mt: 2 }} color="text.secondary">
-                    Loading applications...
-                  </Typography>
-                </Box>
-              ) : audio.applications.length === 0 ? (
+              {audio.applications.length === 0 && !audio.loadingApplications ? (
                 <Alert severity="info">
                   No applications with audio found
                 </Alert>
