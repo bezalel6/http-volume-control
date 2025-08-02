@@ -89,3 +89,17 @@ export interface AudioError {
   message: string;
   code: 'DEVICE_NOT_FOUND' | 'INVALID_VOLUME' | 'COMMAND_FAILED' | 'UNKNOWN_ERROR' | 'APPLICATION_NOT_FOUND';
 }
+
+export interface AudioProcess {
+  name: string;
+  processPath: string;
+  iconPath?: string;
+  isActive: boolean; // Currently playing audio
+}
+
+export interface ProcessListResponse {
+  success: boolean;
+  processes: AudioProcess[];
+  timestamp: string;
+  error?: string;
+}
