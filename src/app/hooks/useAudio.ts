@@ -45,11 +45,12 @@ interface UseAudioActions {
 export type UseAudioReturn = UseAudioState & UseAudioActions;
 
 // Debounce hook
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function useDebounce<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   return useCallback((...args: Parameters<T>) => {
     if (timeoutRef.current) {
@@ -228,8 +229,7 @@ export function useAudio(): UseAudioReturn {
     
     const result = await actions.setApplicationVolume(
       app.processPath, 
-      volume, 
-      app.instanceId
+      volume
     );
     
     if (!result.success) {

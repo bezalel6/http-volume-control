@@ -36,6 +36,7 @@ import {
 import { useTheme } from '@/components/ThemeProvider';
 import { useAudio } from '@/app/hooks/useAudio';
 import Settings from '@/components/settings';
+import { AudioApplication } from '@/types/audio';
 
 export default function Home() {
   const { mode, toggleColorMode } = useTheme();
@@ -53,7 +54,7 @@ export default function Home() {
   };
 
   const handleApplicationVolumeChange = async (
-    app: any,
+    app: AudioApplication,
     value: number
   ) => {
     await audio.setApplicationVolume(app, value);
@@ -92,7 +93,7 @@ export default function Home() {
               <Tab icon={<SpeakerIcon />} label="Default Device" iconPosition="start" />
               <Tab icon={<AppsIcon />} label="Applications" iconPosition="start" />
             </Tabs>
-            <Settings />
+            <Settings onSettingsChange={audio.loadApplications} />
           </Box>
 
           {activeTab === 0 ? (
