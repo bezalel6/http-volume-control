@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import {
   Container,
@@ -38,168 +38,39 @@ import {
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
-import { audioAPI } from '@/lib/api-client';
-import { AudioDevice, AudioApplication } from '@/types/audio';
 import { useTheme } from '@/components/ThemeProvider';
+import { useAudio } from '@/app/hooks/useAudio';
 
 export default function Home() {
   const { mode, toggleColorMode } = useTheme();
+  const audio = useAudio();
   const [activeTab, setActiveTab] = useState(0);
-  
-  // Device state
-  const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [device, setDevice] = useState<string>('DefaultRenderDevice');
-  const [volume, setVolume] = useState<number>(50);
-  const [muted, setMuted] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [loadingDevices, setLoadingDevices] = useState<boolean>(false);
-  
-  // Application state
-  const [applications, setApplications] = useState<AudioApplication[]>([]);
-  const [loadingApps, setLoadingApps] = useState<boolean>(false);
-  
-  // UI state
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-
-  // Load devices on mount
-  useEffect(() => {
-    loadDevices();
-    loadApplications();
-  }, []);
-
-  // Load current volume when device changes
-  useEffect(() => {
-    if (device) {
-      loadCurrentVolume();
-    }
-  }, [device]);
-
-  const loadDevices = async () => {
-    setLoadingDevices(true);
-    try {
-      const response = await audioAPI.getDevices();
-      if (response.success) {
-        setDevices(response.devices);
-        if (response.defaultDevice && !device) {
-          setDevice(response.defaultDevice);
-        }
-      } else {
-        setError(response.error || 'Failed to load devices');
-      }
-    } catch (err) {
-      setError('Failed to connect to API');
-    } finally {
-      setLoadingDevices(false);
-    }
-  };
-
-  const loadApplications = async () => {
-    setLoadingApps(true);
-    try {
-      const response = await audioAPI.getApplications();
-      if (response.success) {
-        setApplications(response.applications);
-      } else {
-        setError(response.error || 'Failed to load applications');
-      }
-    } catch (err) {
-      setError('Failed to connect to API');
-    } finally {
-      setLoadingApps(false);
-    }
-  };
-
-  const loadCurrentVolume = async () => {
-    try {
-      const response = await audioAPI.getVolume({ device });
-      if (response.success) {
-        setVolume(response.volume);
-        setMuted(response.muted);
-      }
-    } catch (err) {
-      console.error('Failed to load current volume:', err);
-    }
-  };
-
-  const handleVolumeChange = useCallback(
-    async (_event: Event, newValue: number | number[]) => {
-      const newVolume = Array.isArray(newValue) ? newValue[0] : newValue;
-      setVolume(newVolume);
-      
-      setLoading(true);
-      try {
-        const response = await audioAPI.setVolume({ device, volume: newVolume });
-        if (response.success) {
-          setSuccess('Volume updated');
-        } else {
-          setError(response.error || 'Failed to set volume');
-          setVolume(volume); // Revert on error
-        }
-      } catch (err) {
-        setError('Failed to connect to API');
-        setVolume(volume); // Revert on error
-      } finally {
-        setLoading(false);
-      }
-    },
-    [device, volume]
-  );
-
-  const handleApplicationVolumeChange = useCallback(
-    async (app: AudioApplication, newVolume: number) => {
-      setLoading(true);
-      try {
-        const response = await audioAPI.setApplicationVolume({
-          processPath: app.processPath,
-          volume: newVolume,
-          instanceId: app.instanceId
-        });
-        
-        if (response.success) {
-          setApplications(prev => 
-            prev.map(a => 
-              a.processPath === app.processPath && a.instanceId === app.instanceId
-                ? { ...a, volume: newVolume }
-                : a
-            )
-          );
-          setSuccess('Application volume updated');
-        } else {
-          setError(response.error || 'Failed to set application volume');
-        }
-      } catch (err) {
-        setError('Failed to connect to API');
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  const toggleMute = async () => {
-    setLoading(true);
-    try {
-      const response = await audioAPI.setMute({ device, mute: !muted });
-      if (response.success) {
-        setMuted(response.muted);
-        setSuccess(response.muted ? 'Muted' : 'Unmuted');
-      } else {
-        setError(response.error || 'Failed to toggle mute');
-      }
-    } catch (err) {
-      setError('Failed to connect to API');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeviceChange = (event: SelectChangeEvent) => {
-    setDevice(event.target.value);
-  };
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+  };
+
+  const handleDeviceChange = (event: SelectChangeEvent) => {
+    audio.setDevice(event.target.value);
+  };
+
+  const handleVolumeChange = async (_event: Event, value: number | number[]) => {
+    const newVolume = Array.isArray(value) ? value[0] : value;
+    await audio.setVolume(newVolume);
+  };
+
+  const handleApplicationVolumeChange = async (
+    app: any,
+    value: number
+  ) => {
+    await audio.setApplicationVolume(app, value);
+    setSuccessMessage('Application volume updated');
+  };
+
+  const handleMuteToggle = async () => {
+    await audio.toggleMute();
+    setSuccessMessage(audio.muted ? 'Unmuted' : 'Muted');
   };
 
   return (
@@ -237,12 +108,12 @@ export default function Home() {
                   <FormControl fullWidth>
                     <InputLabel>Audio Device</InputLabel>
                     <Select
-                      value={device}
+                      value={audio.currentDevice}
                       onChange={handleDeviceChange}
-                      disabled={loadingDevices || loading}
+                      disabled={audio.loadingDevices || audio.loadingVolume}
                       label="Audio Device"
                     >
-                      {devices.map((dev) => (
+                      {audio.devices.map((dev) => (
                         <MenuItem key={dev.id} value={dev.name}>
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Typography>
@@ -258,9 +129,9 @@ export default function Home() {
                   </FormControl>
                   <Button
                     variant="outlined"
-                    onClick={loadDevices}
-                    disabled={loading || loadingDevices}
-                    startIcon={loadingDevices ? <CircularProgress size={20} /> : <RefreshIcon />}
+                    onClick={audio.loadDevices}
+                    disabled={audio.loadingDevices}
+                    startIcon={audio.loadingDevices ? <CircularProgress size={20} /> : <RefreshIcon />}
                   >
                     Refresh
                   </Button>
@@ -275,17 +146,17 @@ export default function Home() {
                     
                     <Stack direction="row" spacing={2} alignItems="center">
                       <IconButton
-                        onClick={toggleMute}
-                        disabled={loading}
-                        color={muted ? "error" : "default"}
+                        onClick={handleMuteToggle}
+                        disabled={audio.loadingVolume}
+                        color={audio.muted ? "error" : "default"}
                       >
-                        {muted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+                        {audio.muted ? <VolumeOffIcon /> : <VolumeUpIcon />}
                       </IconButton>
                       
                       <Slider
-                        value={volume}
+                        value={audio.volume}
                         onChange={handleVolumeChange}
-                        disabled={loading || muted}
+                        disabled={audio.loadingVolume || audio.muted}
                         marks
                         step={5}
                         min={0}
@@ -294,11 +165,11 @@ export default function Home() {
                       />
                       
                       <Typography sx={{ minWidth: 50 }}>
-                        {volume}%
+                        {audio.volume}%
                       </Typography>
                     </Stack>
 
-                    {muted && (
+                    {audio.muted && (
                       <Alert severity="info" icon={<VolumeOffIcon />}>
                         Device is muted
                       </Alert>
@@ -314,29 +185,29 @@ export default function Home() {
                 <Typography variant="h6">Running Applications</Typography>
                 <Button
                   variant="outlined"
-                  onClick={loadApplications}
-                  disabled={loadingApps}
-                  startIcon={loadingApps ? <CircularProgress size={20} /> : <RefreshIcon />}
+                  onClick={audio.loadApplications}
+                  disabled={audio.loadingApplications}
+                  startIcon={audio.loadingApplications ? <CircularProgress size={20} /> : <RefreshIcon />}
                 >
                   Refresh
                 </Button>
               </Box>
 
               {/* Applications List */}
-              {loadingApps ? (
+              {audio.loadingApplications ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <CircularProgress />
                   <Typography sx={{ mt: 2 }} color="text.secondary">
                     Loading applications...
                   </Typography>
                 </Box>
-              ) : applications.length === 0 ? (
+              ) : audio.applications.length === 0 ? (
                 <Alert severity="info">
                   No applications with audio found
                 </Alert>
               ) : (
                 <Stack spacing={2}>
-                  {applications.map((app, index) => (
+                  {audio.applications.map((app, index) => (
                     <Card key={`${app.processPath}-${app.instanceId || index}`}>
                       <CardContent>
                         <Stack direction="row" spacing={2}>
@@ -376,7 +247,7 @@ export default function Home() {
                               <Slider
                                 value={app.volume}
                                 onChange={(_e, value) => handleApplicationVolumeChange(app, value as number)}
-                                disabled={loading}
+                                disabled={audio.loadingVolume}
                                 step={5}
                                 min={0}
                                 max={100}
@@ -397,22 +268,22 @@ export default function Home() {
 
         {/* Status Messages */}
         <Snackbar
-          open={!!error}
+          open={!!audio.error}
           autoHideDuration={6000}
-          onClose={() => setError('')}
+          onClose={audio.clearError}
         >
-          <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
-            {error}
+          <Alert onClose={audio.clearError} severity="error" sx={{ width: '100%' }}>
+            {audio.error}
           </Alert>
         </Snackbar>
 
         <Snackbar
-          open={!!success}
+          open={!!successMessage}
           autoHideDuration={3000}
-          onClose={() => setSuccess('')}
+          onClose={() => setSuccessMessage('')}
         >
-          <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
-            {success}
+          <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
+            {successMessage}
           </Alert>
         </Snackbar>
       </Container>
