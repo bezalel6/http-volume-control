@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { audioAPI } from '@/lib/api-client';
 import { AudioDevice, AudioApplication } from '@/types/audio';
 
@@ -423,28 +424,67 @@ export default function Home() {
                       border: '1px solid #e2e8f0'
                     }}
                   >
-                    <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: '#2d3748' }}>
-                      {app.name} {app.instanceId ? `(${app.instanceId})` : ''}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#718096', marginBottom: '0.75rem' }}>
-                      {app.processPath}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: '#4a5568', minWidth: '50px' }}>
-                        {Math.round(app.volume)}%
-                      </span>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={app.volume}
-                        onChange={(e) => handleApplicationVolumeChange(app, Number(e.target.value))}
-                        disabled={loading}
-                        style={{ 
-                          flex: 1,
-                          cursor: loading ? 'not-allowed' : 'pointer'
-                        }}
-                      />
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                      {/* Application Icon */}
+                      <div style={{ 
+                        width: '48px', 
+                        height: '48px', 
+                        flexShrink: 0,
+                        position: 'relative',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        background: '#e2e8f0'
+                      }}>
+                        {app.iconPath ? (
+                          <Image
+                            src={app.iconPath}
+                            alt={`${app.name} icon`}
+                            width={48}
+                            height={48}
+                            style={{ objectFit: 'contain' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '20px',
+                            fontWeight: '600',
+                            color: '#718096'
+                          }}>
+                            {app.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Application Details */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: '#2d3748' }}>
+                          {app.name} {app.instanceId ? `(${app.instanceId})` : ''}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#718096', marginBottom: '0.75rem' }}>
+                          {app.processPath}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span style={{ fontSize: '0.875rem', color: '#4a5568', minWidth: '50px' }}>
+                            {Math.round(app.volume)}%
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={app.volume}
+                            onChange={(e) => handleApplicationVolumeChange(app, Number(e.target.value))}
+                            disabled={loading}
+                            style={{ 
+                              flex: 1,
+                              cursor: loading ? 'not-allowed' : 'pointer'
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
