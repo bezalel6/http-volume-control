@@ -57,41 +57,32 @@ const SimpleWhitelist: React.FC<SimpleWhitelistProps> = ({
   });
 
   return (
-    <Box sx={{ height: isMobileLandscape ? '100%' : 'auto', display: 'flex', flexDirection: 'column' }}>
-      {!isMobileLandscape && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-          Tap applications to show/hide them from volume control
-        </Typography>
-      )}
-
-      <Grid container spacing={1} sx={{ flex: 1, overflow: isMobileLandscape ? 'auto' : 'visible' }}>
+    <Box sx={{ height: isMobileLandscape ? '100%' : 'auto' }}>
+      <Grid container spacing={1} sx={{ overflow: isMobileLandscape ? 'auto' : 'visible' }}>
         {sortedProcesses.map((process) => {
           const isSelected = selectedProcesses.includes(process.processPath);
           
           return (
-            <Grid item xs={4} sm={3} key={process.processPath}>
-              <Tooltip title={process.name} arrow>
+            <Grid item xs={3} sm={2.4} md={2} key={process.processPath}>
                 <Box
                   onClick={() => onToggleProcess(process.processPath)}
                   sx={{
                     position: 'relative',
                     width: '100%',
                     aspectRatio: '1',
-                    borderRadius: 3,
+                    borderRadius: 2,
                     overflow: 'hidden',
                     cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    transform: isSelected ? 'scale(1)' : 'scale(0.9)',
-                    opacity: isSelected ? 1 : 0.6,
+                    transition: 'opacity 0.15s ease, background-color 0.15s ease',
                     bgcolor: isSelected 
-                      ? (mode === 'dark' ? 'primary.dark' : 'primary.light')
+                      ? (mode === 'dark' ? 'primary.dark' : 'primary.main')
                       : (mode === 'dark' ? 'grey.900' : 'grey.100'),
+                    opacity: isSelected ? 1 : 0.6,
                     '&:hover': {
-                      transform: isSelected ? 'scale(1.05)' : 'scale(0.95)',
                       opacity: 1,
                     },
                     '&:active': {
-                      transform: 'scale(0.85)',
+                      opacity: 0.8,
                     },
                   }}
                 >
@@ -110,21 +101,20 @@ const SimpleWhitelist: React.FC<SimpleWhitelistProps> = ({
                       <Image
                         src={process.iconPath}
                         alt={process.name}
-                        width={64}
-                        height={64}
+                        width={48}
+                        height={48}
                         style={{ 
                           objectFit: 'contain',
-                          filter: isSelected ? 'none' : 'grayscale(50%)',
                         }}
                       />
                     ) : (
                       <Typography 
-                        variant="h3" 
+                        variant="h4" 
                         sx={{ 
                           color: isSelected 
-                            ? (mode === 'dark' ? 'primary.contrastText' : 'primary.main')
-                            : (mode === 'dark' ? 'grey.700' : 'grey.400'),
-                          fontWeight: 700,
+                            ? (mode === 'dark' ? 'white' : 'white')
+                            : 'text.secondary',
+                          fontWeight: 600,
                           userSelect: 'none',
                         }}
                       >
@@ -132,65 +122,11 @@ const SimpleWhitelist: React.FC<SimpleWhitelistProps> = ({
                       </Typography>
                     )}
                   </Box>
-
-                  {/* Selected Indicator */}
-                  {isSelected && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        bgcolor: 'success.main',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 2,
-                      }}
-                    >
-                      <CheckIcon sx={{ fontSize: 16, color: 'white' }} />
-                    </Box>
-                  )}
-
-                  {/* Active Indicator */}
-                  {process.isActive && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: 8,
-                        right: 8,
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        bgcolor: 'success.main',
-                        boxShadow: '0 0 0 3px rgba(76, 175, 80, 0.3)',
-                        animation: 'pulse 2s infinite',
-                      }}
-                    />
-                  )}
                 </Box>
-              </Tooltip>
             </Grid>
           );
         })}
       </Grid>
-
-      {/* Add pulse animation */}
-      <style jsx global>{`
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
-          }
-        }
-      `}</style>
     </Box>
   );
 };
