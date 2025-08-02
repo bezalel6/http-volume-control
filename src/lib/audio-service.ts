@@ -215,8 +215,11 @@ export class AudioService {
 
   async getApplications(): Promise<AudioApplication[]> {
     try {
-      // Use piped command to get application info - only show applications that are playing audio (Direction=Render)
-      const command = `"${this.svclPath}" /scomma "" /Columns "Name,Type,Process Path,Volume Percent,Direction" | "${this.getNirPath}" "Name,Volume Percent,Process Path" "Type=Application && 'Process Path' EndsWith .exe && Direction=Render"`;
+      // First, get the name of the default audio device
+      const { defaultDevice } = await this.getDevices();
+      
+      // Use piped command to get application info - only show applications that are playing audio (Direction=Render) on the default device
+      const command = `"${this.svclPath}" /scomma "" /Columns "Name,Type,Process Path,Volume Percent,Direction,Device Name" | "${this.getNirPath}" "Name,Volume Percent,Process Path,Device Name" "Type=Application && 'Process Path' EndsWith .exe && Direction=Render && 'Device Name'='${defaultDevice}'"`;
       
       const { stdout } = await this.execWithLogging(command);
       
@@ -229,8 +232,8 @@ export class AudioService {
         // Parse TSV line - GetNir outputs tab-separated values
         const parts = this.parseTSVLine(line);
         
-        if (parts.length >= 3) {
-          const [name, volumeStr, processPath] = parts;
+        if (parts.length >= 4) {
+          const [name, volumeStr, processPath, deviceName] = parts;
           const volume = parseFloat(volumeStr) || 0;
           
           // Handle multiple instances
