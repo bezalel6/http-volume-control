@@ -18,38 +18,9 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Get latest ExtractIcon release
-      id: get_release
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const { data: releases } = await github.rest.repos.listReleases({
-            owner: 'bezalel6',
-            repo: 'ExtractIcon',
-          });
-          
-          if (releases.length === 0) {
-            throw new Error('No releases found');
-          }
-          
-          const latestRelease = releases[0];
-          const exeAsset = latestRelease.assets.find(asset => 
-            asset.name.toLowerCase() === 'extracticon.exe'
-          );
-          
-          if (!exeAsset) {
-            throw new Error('extracticon.exe not found in latest release');
-          }
-          
-          return {
-            download_url: exeAsset.browser_download_url,
-            tag_name: latestRelease.tag_name,
-            release_name: latestRelease.name
-          };
-    
-    - name: Download ExtractIcon.exe
+    - name: Download latest ExtractIcon.exe
       run: |
-        curl -L -o extracticon.exe "${{ fromJSON(steps.get_release.outputs.result).download_url }}"
+        curl -L -o extracticon.exe https://github.com/bezalel6/ExtractIcon/releases/download/latest/extracticon.exe
         chmod +x extracticon.exe
     
     - name: Check if ExtractIcon.exe changed
@@ -67,5 +38,5 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add extracticon.exe
-        git commit -m "chore: update extracticon.exe to ${{ fromJSON(steps.get_release.outputs.result).tag_name }}"
+        git commit -m "chore: update extracticon.exe to latest"
         git push
