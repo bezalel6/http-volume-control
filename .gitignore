@@ -42,3 +42,6 @@ next-env.d.ts
 
 # extracted application icons
 /public/icons/apps/*.png
+
+# user settings
+settings.json
