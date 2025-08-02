@@ -84,7 +84,7 @@ export async function getApplications(): Promise<ActionResult<AudioApplication[]
     };
   }
 }
-
+  
 export async function setApplicationVolume(
   processPath: string, 
   volume: number

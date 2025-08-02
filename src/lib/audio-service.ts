@@ -14,6 +14,7 @@ export class AudioService {
   private extractIconPath: string;
   private iconsDir: string;
   private settingsService: SettingsService;
+  private debug: boolean;
 
   constructor() {
     // Path to svcl.exe, GetNir.exe, and extracticon.exe in project root
@@ -22,16 +23,24 @@ export class AudioService {
     this.extractIconPath = path.join(process.cwd(), 'extracticon.exe');
     this.iconsDir = path.join(process.cwd(), 'public', 'icons', 'apps');
     this.settingsService = new SettingsService();
+    // Debug logging is disabled by default
+    this.debug = process.env.AUDIO_DEBUG === 'true';
   }
 
   private async execWithLogging(command: string): Promise<{ stdout: string; stderr: string }> {
-    console.log('[AudioService] Executing command:', command);
+    if (this.debug) {
+      console.log('[AudioService] Executing command:', command);
+    }
     try {
       const result = await execAsync(command);
-      console.log('[AudioService] Command output:', result.stdout.substring(0, 200) + (result.stdout.length > 200 ? '...' : ''));
+      if (this.debug) {
+        console.log('[AudioService] Command output:', result.stdout.substring(0, 200) + (result.stdout.length > 200 ? '...' : ''));
+      }
       return result;
     } catch (error) {
-      console.error('[AudioService] Command failed:', error);
+      if (this.debug) {
+        console.error('[AudioService] Command failed:', error);
+      }
       throw error;
     }
   }
@@ -55,7 +64,9 @@ export class AudioService {
       }
       return stdout.trim();
     } catch (error) {
-      console.error('AudioService command error:', error);
+      if (this.debug) {
+        console.error('AudioService command error:', error);
+      }
       throw this.createError(error);
     }
   }
@@ -178,7 +189,9 @@ export class AudioService {
       // Return the actual default device name
       return { devices, defaultDevice };
     } catch (error) {
-      console.error('Failed to get devices:', error);
+      if (this.debug) {
+        console.error('Failed to get devices:', error);
+      }
       // Return empty array with error info - let the API layer handle the fallback
       throw this.createError(error);
     }
@@ -276,7 +289,9 @@ export class AudioService {
       
       return applications;
     } catch (error) {
-      console.error('Failed to get applications:', error);
+      if (this.debug) {
+        console.error('Failed to get applications:', error);
+      }
       return [];
     }
   }
@@ -335,11 +350,15 @@ export class AudioService {
         await fs.access(iconPath);
         return `/icons/apps/${iconFileName}`;
       } catch {
-        console.error(`Failed to extract icon for ${processPath}`);
+        if (this.debug) {
+          console.error(`Failed to extract icon for ${processPath}`);
+        }
         return undefined;
       }
     } catch (error) {
-      console.error('Error extracting application icon:', error);
+      if (this.debug) {
+        console.error('Error extracting application icon:', error);
+      }
       return undefined;
     }
   }
@@ -387,7 +406,9 @@ export class AudioService {
       
       return processes;
     } catch (error) {
-      console.error('Failed to get all processes:', error);
+      if (this.debug) {
+        console.error('Failed to get all processes:', error);
+      }
       return [];
     }
   }
