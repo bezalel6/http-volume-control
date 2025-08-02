@@ -10,5 +10,5 @@ See [binaries/README.md](binaries/README.md) for manual download instructions.
 
 The following utilities are required:
 - [SoundVolumeCommandLine](https://www.nirsoft.net/utils/sound_volume_command_line.html) - Audio control
-- [GetNir](https://www.nirsoft.net/utils/get_nir_command_line_tool.html) - CSV filtering
+- [GetNir](https://www.nirsoft.net/utils/get_nir_command_line_tool.html) - CSV filtering (required for svcl.exe output parsing)
 - [ExtractIcon](https://github.com/bezalel6/ExtractIcon) - High-quality icon extraction from application executables
