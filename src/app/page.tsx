@@ -99,10 +99,10 @@ export default function Home() {
       <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar sx={{ px: { xs: 1, sm: 2 }, minHeight: { xs: 48, sm: 56 } }}>
           <VolumeUpIcon sx={{ mr: 1, fontSize: 20, color: 'primary.main' }} />
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
               flexGrow: 1,
               fontSize: { xs: '1rem', sm: '1.125rem' },
               fontWeight: 500,
@@ -111,15 +111,15 @@ export default function Home() {
           >
             Volume Control
           </Typography>
-          <IconButton 
-            onClick={toggleFullscreen} 
+          <IconButton
+            onClick={toggleFullscreen}
             size="small"
             sx={{ color: 'text.primary', mr: 0.5 }}
           >
             {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
           </IconButton>
-          <IconButton 
-            onClick={toggleColorMode} 
+          <IconButton
+            onClick={toggleColorMode}
             size="small"
             sx={{ color: 'text.primary' }}
           >
@@ -136,13 +136,13 @@ export default function Home() {
               onChange={handleTabChange}
               sx={{ flexGrow: 1 }}
             >
-              <Tab 
-                icon={<SpeakerIcon sx={{ fontSize: 20 }} />} 
+              <Tab
+                icon={<SpeakerIcon sx={{ fontSize: 20 }} />}
                 label="System"
                 sx={{ minHeight: 48, fontSize: '0.875rem' }}
               />
-              <Tab 
-                icon={<AppsIcon sx={{ fontSize: 20 }} />} 
+              <Tab
+                icon={<AppsIcon sx={{ fontSize: 20 }} />}
                 label="Apps"
                 sx={{ minHeight: 48, fontSize: '0.875rem' }}
               />
@@ -193,7 +193,7 @@ export default function Home() {
                         min={0}
                         max={100}
                         valueLabelDisplay="auto"
-                        sx={{ 
+                        sx={{
                           flex: 1,
                           '& .MuiSlider-thumb': {
                             width: 16,
@@ -208,10 +208,10 @@ export default function Home() {
                         }}
                       />
 
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          minWidth: 45, 
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          minWidth: 45,
                           textAlign: 'right',
                           fontWeight: 'medium'
                         }}
@@ -221,8 +221,8 @@ export default function Home() {
                     </Stack>
 
                     {audio.muted && (
-                      <Alert 
-                        severity="info" 
+                      <Alert
+                        severity="info"
                         icon={<VolumeOffIcon />}
                         sx={{ py: 0.5 }}
                       >
@@ -248,10 +248,10 @@ export default function Home() {
               </Box>
 
               {/* Applications List */}
-              {audio.applications.length === 0 && !audio.loadingApplications ? (
-                <Box 
-                  sx={{ 
-                    textAlign: 'center', 
+              {audio.applications.length === 0 ? (
+                <Box
+                  sx={{
+                    textAlign: 'center',
                     py: 4,
                     color: 'text.secondary',
                   }}
@@ -264,10 +264,10 @@ export default function Home() {
               ) : (
                 <Stack spacing={1}>
                   {audio.applications.map((app, index) => (
-                    <Card 
+                    <Card
                       key={`${app.processPath}-${app.instanceId || index}`}
                       variant="outlined"
-                      sx={{ 
+                      sx={{
                         overflow: 'hidden',
                         transition: 'all 0.2s ease',
                         borderRadius: 1,
@@ -325,7 +325,7 @@ export default function Home() {
                               min={0}
                               max={100}
                               valueLabelDisplay="auto"
-                              sx={{ 
+                              sx={{
                                 flex: 1,
                                 '& .MuiSlider-thumb': {
                                   width: 16,
@@ -339,10 +339,10 @@ export default function Home() {
                                 },
                               }}
                             />
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                minWidth: 40, 
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                minWidth: 40,
                                 textAlign: 'right',
                                 fontWeight: 'medium'
                               }}
