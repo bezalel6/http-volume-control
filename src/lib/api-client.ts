@@ -13,9 +13,9 @@ import {
 class AudioAPIClient {
   private baseUrl = '/api/audio';
 
-  async getVolume(device: string): Promise<GetVolumeResponse> {
+  async getVolume(params: { device: string }): Promise<GetVolumeResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/volume?device=${encodeURIComponent(device)}`);
+      const response = await fetch(`${this.baseUrl}/volume?device=${encodeURIComponent(params.device)}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -26,7 +26,7 @@ class AudioAPIClient {
     } catch (error) {
       return {
         success: false,
-        device,
+        device: params.device,
         volume: 0,
         muted: false,
         timestamp: new Date().toISOString(),
@@ -35,9 +35,9 @@ class AudioAPIClient {
     }
   }
 
-  async setVolume(device: string, volume: number): Promise<VolumeResponse> {
+  async setVolume(params: { device: string; volume: number }): Promise<VolumeResponse> {
     try {
-      const request: VolumeRequest = { device, volume };
+      const request: VolumeRequest = { device: params.device, volume: params.volume };
       
       const response = await fetch(`${this.baseUrl}/volume`, {
         method: 'POST',
@@ -57,17 +57,17 @@ class AudioAPIClient {
     } catch (error) {
       return {
         success: false,
-        device,
-        volume,
+        device: params.device,
+        volume: params.volume,
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Network error'
       };
     }
   }
 
-  async setMute(device: string, mute: boolean): Promise<MuteResponse> {
+  async setMute(params: { device: string; mute: boolean }): Promise<MuteResponse> {
     try {
-      const request: MuteRequest = { device, mute };
+      const request: MuteRequest = { device: params.device, mute: params.mute };
       
       const response = await fetch(`${this.baseUrl}/mute`, {
         method: 'POST',
@@ -87,8 +87,8 @@ class AudioAPIClient {
     } catch (error) {
       return {
         success: false,
-        device,
-        muted: mute,
+        device: params.device,
+        muted: params.mute,
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Network error'
       };
@@ -137,12 +137,14 @@ class AudioAPIClient {
   }
 
   async setApplicationVolume(
-    processPath: string, 
-    volume: number, 
-    instanceId?: string
+    params: { processPath: string; volume: number; instanceId?: string }
   ): Promise<ApplicationVolumeResponse> {
     try {
-      const request: ApplicationVolumeRequest = { processPath, volume, instanceId };
+      const request: ApplicationVolumeRequest = { 
+        processPath: params.processPath, 
+        volume: params.volume, 
+        instanceId: params.instanceId 
+      };
       
       const response = await fetch(`${this.baseUrl}/applications/volume`, {
         method: 'POST',
@@ -162,8 +164,8 @@ class AudioAPIClient {
     } catch (error) {
       return {
         success: false,
-        processPath,
-        volume,
+        processPath: params.processPath,
+        volume: params.volume,
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Network error'
       };
