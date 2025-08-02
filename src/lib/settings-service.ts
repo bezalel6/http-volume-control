@@ -16,7 +16,7 @@ export class SettingsService {
       const settings = JSON.parse(data);
       // Merge with defaults to ensure all fields exist
       return { ...defaultSettings, ...settings };
-    } catch (error) {
+    } catch {
       // If file doesn't exist or is invalid, return defaults
       console.log('Settings file not found, using defaults');
       return defaultSettings;
