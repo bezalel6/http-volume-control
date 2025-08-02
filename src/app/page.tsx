@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAudio } from '@/app/hooks/useAudio';
+import Settings from '@/components/settings';
 
 export default function Home() {
   const { mode, toggleColorMode } = useTheme();
@@ -91,20 +92,23 @@ export default function Home() {
 
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Paper elevation={3} sx={{ p: 3 }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-          >
-            <Tab icon={<SpeakerIcon />} label="Devices" iconPosition="start" />
-            <Tab icon={<AppsIcon />} label="Applications" iconPosition="start" />
-          </Tabs>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', alignItems: 'center' }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              sx={{ flexGrow: 1 }}
+            >
+              <Tab icon={<SpeakerIcon />} label="Devices" iconPosition="start" />
+              <Tab icon={<AppsIcon />} label="Applications" iconPosition="start" />
+            </Tabs>
+            <Settings />
+          </Box>
 
           {activeTab === 0 ? (
             <Box>
               {/* Device Selection */}
               <Box sx={{ mb: 4 }}>
-                <Stack direction="row" spacing={2} alignItems="flex-end">
+                <Stack direction="row" spacing={2} alignItems="center">
                   <FormControl fullWidth>
                     <InputLabel>Audio Device</InputLabel>
                     <Select
@@ -143,7 +147,7 @@ export default function Home() {
                 <CardContent>
                   <Stack spacing={3}>
                     <Typography variant="h6">Volume Control</Typography>
-                    
+
                     <Stack direction="row" spacing={2} alignItems="center">
                       <IconButton
                         onClick={handleMuteToggle}
@@ -152,7 +156,7 @@ export default function Home() {
                       >
                         {audio.muted ? <VolumeOffIcon /> : <VolumeUpIcon />}
                       </IconButton>
-                      
+
                       <Slider
                         value={audio.volume}
                         onChange={handleVolumeChange}
@@ -163,7 +167,7 @@ export default function Home() {
                         max={100}
                         valueLabelDisplay="auto"
                       />
-                      
+
                       <Typography sx={{ minWidth: 50 }}>
                         {audio.volume}%
                       </Typography>
@@ -239,7 +243,7 @@ export default function Home() {
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                               {app.processPath}
                             </Typography>
-                            
+
                             <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
                               <Typography sx={{ minWidth: 50 }}>
                                 {Math.round(app.volume)}%
