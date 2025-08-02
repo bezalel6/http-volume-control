@@ -1,8 +1,8 @@
 // Settings type definitions
 
 export interface Settings {
-  // Basic test setting
-  name: string;
+  // Application whitelist
+  whitelistedApps: string[]; // Array of process paths
   
   // Future settings can be added here
   // theme?: 'light' | 'dark' | 'system';
@@ -11,5 +11,5 @@ export interface Settings {
 }
 
 export const defaultSettings: Settings = {
-  name: 'User',
+  whitelistedApps: [],
 };
