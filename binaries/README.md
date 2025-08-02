@@ -1,0 +1,28 @@
+# Required Binaries
+
+Place these executables in this folder:
+
+## Required Files
+- `svcl.exe` - Sound Volume Command Line
+- `GetNir.exe` - CSV filtering utility  
+- `extracticon.exe` - Icon extraction utility
+
+## Download Instructions
+
+### Option 1: Download Pre-packaged
+Download `http-volume-control-binaries.zip` from the releases page and extract all files here.
+
+### Option 2: Manual Download
+1. **svcl.exe**: Download from [NirSoft SoundVolumeCommandLine](https://www.nirsoft.net/utils/sound_volume_command_line.html)
+2. **GetNir.exe**: Download from [NirSoft GetNir](https://www.nirsoft.net/utils/getnir.html)
+3. **extracticon.exe**: Download from [NirSoft IconsExtract](https://www.nirsoft.net/utils/iconsext.html) (rename iconsext.exe to extracticon.exe)
+
+## Verification
+After placing files, this folder should contain:
+```
+binaries/
+├── README.md (this file)
+├── svcl.exe
+├── GetNir.exe
+└── extracticon.exe
+```
