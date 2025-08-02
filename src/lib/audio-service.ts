@@ -145,7 +145,6 @@ export class AudioService {
       const lines = stdout.split('\n').filter(line => line.trim());
       const devices: AudioDevice[] = [];
       let defaultDevice = '';
-      let defaultDeviceActualName = '';
       
       for (const line of lines) {
         // Parse TSV line - GetNir outputs tab-separated values
@@ -157,25 +156,24 @@ export class AudioService {
           const isDefault = defaultStatus.toLowerCase() === 'render';
           
           devices.push({
-            name: name.trim(),
+            name: deviceName.trim(), // Use the actual device name, not the role
             deviceName: deviceName.trim(),
-            id: name.trim(), // Using name as ID for now
+            id: deviceName.trim(), // Using device name as ID
             volume,
             isDefault,
             type: 'render'
           });
           
           if (isDefault) {
-            defaultDevice = name.trim();
-            defaultDeviceActualName = deviceName.trim();
+            defaultDevice = deviceName.trim(); // Use the actual device name
           }
         }
       }
       
       // No longer adding DefaultRenderDevice to the list - we just return the actual default device name
       
-      // Return the actual default device name, not the placeholder
-      return { devices, defaultDevice: defaultDevice || 'DefaultRenderDevice' };
+      // Return the actual default device name
+      return { devices, defaultDevice };
     } catch (error) {
       console.error('Failed to get devices:', error);
       // Return empty array with error info - let the API layer handle the fallback
